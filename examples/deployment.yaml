@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: envoy
+    app.kubernetes.io/instance: mirror-proxy
+    app.kubernetes.io/name: mirror-proxy
+    app.kubernetes.io/version: v1.23.1
+  name: mirror-proxy
+  namespace: mirror
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: envoy
+      app.kubernetes.io/instance: mirror-proxy
+      app.kubernetes.io/name: mirror-proxy
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: envoy
+        app.kubernetes.io/instance: mirror-proxy
+        app.kubernetes.io/name: mirror-proxy
+        app.kubernetes.io/version: v1.23.1
+    spec:
+      containers:
+      - env:
+        - name: ENVOY_LB_ALG
+          value: LEAST_REQUEST
+        - name: SERVICE_NAME
+          value: mirror-proxy
+        image: docker.io/envoyproxy/envoy:v1.23.1
+        imagePullPolicy: IfNotPresent
+        name: mirror-proxy
+        ports:
+        - containerPort: 9901
+          name: admin
+        - containerPort: 8080
+          name: http
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 9901
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          limits:
+            cpu: 20m
+            memory: 40Mi
+          requests:
+            cpu: 10m
+            memory: 20Mi
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - mountPath: /etc/envoy
+          name: config
+          readOnly: true
+      volumes:
+      - configMap:
+          name: mirror-proxy
+        name: config
